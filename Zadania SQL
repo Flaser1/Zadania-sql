@@ -66,3 +66,27 @@ select c.customer_id, c.customer_name, count(*) as liczba_zamówień from course
 select c.customer_id, c.customer_name, sum(total_amount) from course.customers c inner join course.orders o on c.customer_id = o.customer_id group by c.customer_id;
 select oi.product_id, p.product_name, sum(quantity) from course.order_items oi join course.products p on oi.product_id = p.product_id group by oi.product_id, p.product_name;
 select c.customer_id, c.customer_name, o.order_id from course.customers c left join course.orders o on c.customer_id = o.customer_id where o.order_id is null;
+-- Zadania własne
+-- Policz liczbe klientów z danego kraju
+select country, count(*) from course.customers c group by country;
+-- Policz ilość sprzedaży danego produktu i posegreguj ilość od największej do najmniejszej
+select p.product_id, p.product_name, sum(quantity) from course.products p inner join course.order_items oi on p.product_id = oi.product_id group by p.product_id order by sum desc;
+-- Wyświetl klientów których acquisition channel jest organic i mają podanego maila;
+select * from course.customers where acquisition_channel = 'organic' and email is not null;
+-- Wyświetl tylko zamówienia zrobione między 2026.05.03 - 2026.05.10, które są paid, jaki klient złożył zamówienie, jaki przedmiot kupił oraz jaką ilość i kolejność jest wyświetlana od największej wartości zamówienia
+select o.order_id, o.customer_id, c.customer_name, o.order_date, o.status, p.product_name, oi.quantity, o.total_amount from course.orders o inner join course.customers c on o.customer_id = c.customer_id inner join course.order_items oi on o.order_id = oi.order_id inner join course.products p on p.product_id = oi.product_id where order_date between '2026.05.03' and '2026.05.10' and status = 'paid' order by total_amount desc;
+-- Zadania 08
+select distinct country from course.customers;
+select distinct status from course.orders;
+select distinct category from course.products;
+select distinct country, acquisition_channel from course.customers;
+select customer_name, upper(customer_name) as customer_name_upper from course.customers;
+select customer_name, length(customer_name) as name_lenght from course.customers;
+select customer_name || '-' || country as customer_label from course.customers;
+select order_id, total_amount, round(total_amount * 1.23, 2) as total_with_vat from course.orders;
+select round(avg(total_amount), 2) as average_order_value from course.orders;
+select customer_id, customer_name, coalesce(email, 'missing email') as email from course.customers;
+select order_id, total_amount, case when total_amount >= 150 then 'high' else 'standard' end as order_tier from course.orders;
+select order_item_id, quantity, unit_price, quantity * unit_price as line_value from course.order_items oi;
+select order_id, cast(total_amount as int) as total_amount_int from course.orders;
+select customer_id, customer_name, upper(country) as country_upper, coalesce(email, 'missing email') as email from course.customers;
