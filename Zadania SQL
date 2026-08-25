@@ -60,6 +60,90 @@ select o.order_id, o.order_date, p.product_name, oi.quantity, oi.unit_price from
 select c.customer_id, c.customer_name, o.order_id, o.total_amount from course.customers c inner join course.orders o on c.customer_id = o.customer_id;
 select c.customer_id, c.customer_name, o.order_id, o.total_amount from course.customers c left join course.orders o on c.customer_id = o.customer_id;
 -- Różnica może wynikać z tego, że left join pokazał też klientów bez zamówień, a inner join tylko tych z zamówieniami
+select c.customer_id, c.customer_name, o.order_id, o.total_amount 
+from course.customers c 
+right join course.orders o 
+on c.customer_id = o.customer_id;
+
+select c.customer_id, c.customer_name, o.order_id, o.total_amount 
+from course.customers c 
+full outer join course.orders o 
+on c.customer_id = o.customer_id;
+
+select c.customer_name, p.product_name 
+from course.customers c 
+cross join course.products p;
+
+select c1.customer_name as customer_1, c2.customer_name as customer_2, c1.country 
+from course.customers c1
+inner join course.customers c2
+on c1.country = c2.country 
+and c1.customer_id < c2.customer_id;
+
+select c.customer_id, c.customer_name 
+from course.customers c 
+left join course.orders o 
+on c.customer_id = o.customer_id 
+where o.order_id is null;
+
+select c.customer_id, c.customer_name
+from course.customers c 
+where exists (
+select 1 from course.orders o 
+where o.customer_id = c.customer_id);
+
+select order_id, order_date, customer_name, total_amount
+from course.orders o
+inner join course.customers c
+on o.customer_id = c.customer_id 
+where status = 'paid';
+
+select order_id, product_name, category, quantity 
+from course.order_items oi  
+inner join course.products p 
+on oi.product_id = p.product_id 
+where p.category = 'course';
+
+select c.customer_id, c.customer_name, count(o.order_id) as orders_count
+from course.customers c
+join course.orders o 
+on c.customer_id = o.customer_id 
+group by c.customer_id;
+
+select p.product_id, p.product_name, count(oi.quantity) as units_sold
+from course.products p 
+join course.order_items oi 
+on p.product_id = oi.product_id 
+group by p.product_id;
+
+select c.customer_name, o.order_id, p.product_name,
+oi.quantity, oi.unit_price 
+from course.customers c 
+join course.orders o 
+on c.customer_id = o.customer_id 
+join course.order_items oi 
+on oi.order_id = o.order_id 
+join course.products p 
+on p.product_id = oi.product_id;
+
+select p.product_id, p.product_name 
+from course.products p
+left join course.order_items oi 
+on p.product_id = oi.product_id
+where oi.order_id is null;
+
+select c.customer_id, c.customer_name
+from course.customers c 
+join course.orders o 
+on c.customer_id = o.customer_id 
+join course.order_items oi 
+on o.order_id = oi.order_id 
+join course.products p 
+on p.product_id = oi.product_id 
+where p.category = 'course'
+group by c.customer_id;
+
+
 select o.order_id, o.customer_id, o.order_date, o.status, o.total_amount, c.customer_name from course.orders o inner join course.customers c on o.customer_id = c.customer_id where status = 'paid';
 select oi.order_id, oi.product_id, p.product_name from course.order_items oi inner join course.orders o on oi.order_id = o.order_id inner join course.products p on oi.product_id = p.product_id where product_name like '%Course%';
 select c.customer_id, c.customer_name, count(*) as liczba_zamówień from course.customers c inner join course.orders o on c.customer_id = o.customer_id group by c.customer_id order by liczba_zamówień desc;
@@ -146,7 +230,58 @@ select avg(total_amount)
 from course.orders) 
 group by status;
 
+--Zadania 10
+select table_name, column_name, data_type
+from information_schema.columns
+where table_schema = 'course'
+order by table_name, ordinal_position;
 
+select order_id, cast(total_amount as int) as total_as_int
+from course.orders;
+
+select order_id, order_date, total_amount
+from course.orders
+where order_date >= '2026-05-10';
+
+select order_id, order_date, total_amount
+from course.orders
+where order_date between '2026-05-01' and '2026-05-10';
+
+select order_id, order_date,
+extract(year from order_date) as order_year,
+extract(month from order_date) as order_month,
+extract(day from order_date) as order_day
+from course.orders;
+
+select date_trunc('month', order_date) as sales_month,
+sum(total_amount) as total_revenue
+from course.orders
+group by date_trunc('month', order_date)
+order by sales_month;
+
+select date_trunc('month', signup_date) as signup_month,
+count(customer_id) as customers_count
+from course.customers
+group by date_trunc('month', signup_date)
+order by signup_month;
+
+select current_timestamp as now;
+
+select current_date - interval '7 days' as seven_days_ago;
+
+select order_id, to_char(order_date, 'yyyy-mm') as order_month
+from course.orders;
+
+select order_id, order_date, 
+current_date - order_date as order_age_days
+from course.orders
+group by order_id;
+
+select date_trunc('day', order_date) as day_of_week,
+sum(total_amount) as total_revenue
+from course.orders
+group by date_trunc('day', order_date)
+order by day_of_week;
 
 -- Zadania dodatkowe
 select customer_id, customer_name, country, email, coalesce(email, 'missing email') as email from course.customers where country = 'PL' or country = 'DE' or country = 'FR';
