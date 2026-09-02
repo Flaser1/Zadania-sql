@@ -388,6 +388,120 @@ on c.customer_id = o.customer_id
 group by c.customer_id
 order by total_revenue desc;
 
+-- Zadnia podsumowujace
+
+select c.customer_id, c.customer_name, c.country,
+c.acquisition_channel, count(o.*) as orders_count,
+sum(case when status = 'paid' then 1 else 0 end) as paid_orders_count,
+sum(case when status = 'cancelled' then 1 else 0 end) as cancelled_orders_count,
+sum(total_amount) as total_revenue,
+round(avg(total_amount), 2) as average_order_value, 
+case when count(o.*) > 0 then 'buyer' else 'no_orders' end as customer_status
+from course.customers c
+full join course.orders o
+on c.customer_id = o.customer_id
+group by c.customer_id
+order by total_revenue desc;
+
+select p.product_id, p.product_name, p.category,
+p.base_price, sum(quantity) as units_sold,
+count(oi.*) as orders_count, 
+sum(quantity * unit_price) as gross_revenue,
+round(avg(unit_price), 2), 
+case when count(oi.*) > 0 then 'sold' 
+else 'not_sold' end as sale_status
+from course.products p 
+left join course.order_items oi 
+on p.product_id = oi.product_id 
+group by p.product_id
+order by gross_revenue desc;
+
+select date_trunc('month', o.order_date) as sales_month,
+c.country, count(o.*) as orders_count, 
+count(distinct o.customer_id) as customers_count, 
+sum(case when status = 'paid' then 1 else 0 end) as paid_orders_count,
+sum(case when status = 'cancelled' then 1 else 0 end ) as cancelled_orders_count,
+sum(total_amount) as total_revenue, 
+round(avg(total_amount), 2) as average_orders_value
+from course.customers c
+inner join course.orders o
+on c.customer_id = o.customer_id
+group by sales_month, c.country 
+having sum(total_amount) > 100 
+order by sales_month, total_revenue desc;
+
+-- Subquery
+select c.customer_id, c.customer_name,
+c.country, sum(total_amount) as total_revenue,
+count(o.*) as orders_count 
+from course.customers c 
+inner join course.orders o 
+on c.customer_id = o.customer_id 
+where total_amount > (
+select avg(total_amount) 
+from course.orders)
+group by c.customer_id
+order by total_revenue desc;
+-- CTE
+with sales_per_customer as (
+	select
+		customer_id,
+		sum(total_amount) as total_revenue,
+		count(*) as orders_count
+	from course.orders
+	group by customer_id
+)
+select 
+	c.customer_id,
+	c.customer_name,
+	c.country,
+	total_revenue,
+	orders_count
+from sales_per_customer
+join course.customers c
+on c.customer_id = sales_per_customer.customer_id; -- dokonczyc
+
+select 
+c.customer_id as object_id,
+c.customer_name as object_name, 
+'Customers without orders' as issue_type,
+'Customer has no orders' as details
+from course.customers c 
+left join course.orders o 
+on c.customer_id = o.customer_id 
+where order_id is null
+union all 
+select 
+p.product_id,
+p.product_name,
+'Product without sale',
+'Product has never been sold'
+from course.products p 
+left join course.order_items oi 
+on p.product_id = oi.product_id 
+where oi.order_item_id is null
+union all 
+select 
+o.order_id,
+status,
+'Order without product',
+'Order has no product linked'
+from course.orders o 
+left join course.order_items oi 
+on o.order_id = oi.order_id 
+where oi.product_id is null
+union all 
+select 
+customer_id,
+email,
+'Customer without email',
+'Customer has no email'
+from course.customers 
+where email is null;
+
+select 
+
+
 
 
 
