@@ -1,1 +1,855 @@
+-- Iteracja 2
+
+-- Zadania 02
+
+insert into course.customers (
+	customer_id,
+	customer_name,
+	email,
+	country,
+	signup_date,
+	acquisition_channel
+)
+values (
+	9,
+	'Tomasz',
+	'Tomasz@wpierdol.pl',
+	'PL',
+	'2026-04-21',
+	'organic'
+);
+
+select *
+from course.customers
+where customer_id = 9;
+
+insert into course.customers (
+	customer_id,
+	customer_name,
+	email,
+	country,
+	signup_date,
+	acquisition_channel
+)
+values (
+	44,
+	'Lewis',
+	null,
+	'GB',
+	'2026-06-22',
+	'instagram'
+);
+
+select *
+from course.customers
+where customer_id = 44;
+
+insert into course.products (
+		product_id,
+		product_name,
+		category,
+		base_price
+)
+values 
+	(110, 'Trading MSNR', 'course', 499),
+	(111, 'AI prompts', 'ebook', 299);
+
+select * 
+from course.products;
+
+insert into course.orders (
+	order_id,
+	customer_id,
+	order_date,
+	status,
+	total_amount
+)
+values (
+	1013,
+	9,
+	'2026-08-19',
+	'paid',
+	499
+);
+
+select *
+from course.orders;
+
+insert into course.order_items (
+	order_item_id,
+	order_id,
+	product_id,
+	quantity,
+	unit_price
+)
+values (
+	15,
+	1013,
+	110,
+	1,
+	499
+);
+
+insert into course.order_items (
+	order_item_id,
+	order_id,
+	product_id,
+	quantity,
+	unit_price
+)
+values (
+	16,
+	1013,
+	111,
+	1,
+	299
+);
+
+select * 
+from course.orders o
+join course.order_items oi 
+on o.order_id = oi.order_id;
+
+insert into course.customers (
+	customer_id,
+	customer_name,
+	email,
+	country,
+	signup_date,
+	acquisition_channel 
+)
+values (
+	9,
+	'Lola',
+	null,
+	'DE',
+	'2026-07-09',
+	'organic'
+);
+-- Nie udalo sie dodac takiego customera, poniewaz juz istnieje customer z takim id, a nie da sie miec dwa razy takiego samego primary key
+
+insert into course.orders (
+	order_id,
+	customer_id,
+	order_date,
+	status,
+	total_amount
+)
+values (
+	1018,
+	99,
+	'2026-05-04',
+	'pending',
+	85
+);
+-- Nie udalo sie dodac takiego zamowienia, poniewaz podany primary key do ktorego sie odwolujemy, nie istnieje
+
+insert into course.products (
+	product_id,
+	product_name,
+	category,
+	base_price
+)
+values (
+	125,
+	null,
+	'ebook',
+	67
+); 
+-- Kolumna product_name nie pozwala na wartosc null
+
+-- Zadania 03
+
+select *
+from course.customers
+where customer_id = 6;
+
+update course.customers 
+set email = 'claire@gmail.com'
+where customer_id = 6;
+
+update course.customers 
+set acquisition_channel = 'linkedin'
+where customer_id = 6;
+
+update course.products 
+set base_price = base_price * 1.10
+where category = 'course';
+
+select * 
+from course.products;
+
+update course.orders 
+set status = 'paid' 
+where status = 'pending'
+and total_amount < 100;
+
+select * 
+from course.orders;
+
+update course.customers
+set country = 'PL'
+where country = 'FR';
+
+select * 
+from course.customers 
+where country = 'FR';
+
+update course.order_items 
+set unit_price = 130
+where order_item_id =  1;
+
+select * 
+from course.order_items
+where order_item_id = 1;
+
+update course.order_items
+set quantity = 2
+where product_id = 103;
+
+select *
+from course.order_items
+where product_id = 103;
+
+-- Gdyby w update zabraklo where, to wszystkie pozycje mialy by wartosc quantity = 2
+
+select 
+o.order_id,
+total_amount,
+sum(quantity * unit_price)
+from course.orders o 
+join course.order_items oi 
+on o.order_id = oi.order_id
+group by o.order_id;
+
+update course.orders o
+set total_amount = oi.items_value
+from ( 
+	select 
+		order_id, 
+		sum(quantity * unit_price) as items_value
+		from course.order_items
+		group by order_id
+) oi
+where o.order_id = oi.order_id;
+
+-- Zadania 04
+
+select * 
+from course.order_items  
+where order_item_id = 14;
+
+delete from course.order_items 
+where order_item_id = 14;
+
+select * 
+from course.order_items;
+
+insert into course.products (
+	product_id,
+	product_name,
+	category,
+	base_price
+)
+values (
+	68,
+	'test',
+	'ebook',
+	999
+);
+
+select *
+from course.products;
+
+delete from course.products 
+where product_id = 68;
+
+delete from course.customers 
+where customer_id = 1;
+-- 	Nie mozna usunac klienta, poniewaz jest do niego przypisany foreign key i najpierw trzeba go usunac
+
+delete from course.products 
+where product_id = 101;
+-- Nie mozna usunac produktu, poniewaz tak jak w przypadku klienta, jest do niego przypiasny foreign key
+
+select *
+from course.order_items oi
+join course.orders o
+on o.order_id = oi.order_id
+where status = 'cancelled';
+
+delete from course.order_items oi
+using course.orders o
+where o.order_id = oi.order_id
+and status = 'cancelled';
+
+select * 
+from course.order_items oi  
+join course.products p 
+on p.product_id = oi.product_id 
+where p.category = 'ebook';
+
+delete from course.order_items oi
+using course.products p
+where p.product_id = oi.product_id
+and p.category = 'ebook';
+
+-- Roznica polega na tym, ze przy delete from 'table_name usuwamy' cala zawartosc tabeli ale tabela zostaje, a przy drop 'table_name' usuwamy cala tabele wraz z jej zawartoscia
+
+-- Gdyby w delete zabraklo 'where' to wtedy usuniemy cala zawartosc danej tabeli, a nie okreslone rekordy
+
+-- Zadania 05
+
+begin;
+
+update course.orders 
+set status = 'cancelled'
+where order_id = 1003;
+
+select *
+from course.orders;
+
+rollback;
+
+begin;
+
+insert into course.customers (
+	customer_id,
+	customer_name,
+	email,
+	country,
+	signup_date,
+	acquisition_channel
+)
+values (
+	77,
+	'Juli',
+	'Juli@seven.pl',
+	'PL',
+	'2026-07-07',
+	'instagram'
+);
+
+insert into course.orders (
+	order_id,
+	customer_id,
+	order_date,
+	status,
+	total_amount
+)
+values (
+	77,
+	77,
+	'2026-07-07',
+	'paid',
+	'777'
+);
+
+insert into course.order_items (
+	order_item_id,
+	order_id,
+	product_id,
+	quantity,
+	unit_price 
+)
+values (
+	77,
+	77,
+	101,
+	7,
+	77
+);
+
+select *
+from course.customers c 
+join course.orders o 
+on c.customer_id = o.customer_id 
+join course.order_items oi 
+on o.order_id = oi.order_id;
+
+commit;
+
+begin;
+
+update course.products
+set base_price = base_price * 1.2
+where product_id = 101;
+
+select *
+from course.products;
+
+rollback;
+
+-- Commit potwierdza transakcje, a rollback cofa do tego co bylo przed jej zaczeciem 
+
+-- Zadania 06
+
+insert into course.customers (
+	customer_id,
+	customer_name,
+	email,
+	country,
+	signup_date,
+	acquisition_channel
+)
+values (
+	18,
+	'Mateusz',
+	'Mati@rozpruwacz.pl',
+	'DE',
+	'2026-03-02',
+	'facebook'
+)
+returning *;
+
+insert into course.products (
+	product_id, 
+	product_name,
+	category,
+	base_price 
+)
+values (
+	155,
+	'JP Morgan strategy',
+	'ebook',
+	999
+)
+returning product_id, product_name, base_price;
+
+select *
+from course.orders 
+where order_id = 1003;
+
+update course.orders
+set status = 'paid'
+where order_id = 1003
+returning *;
+
+select *
+from course.customers 
+where customer_id = 3;
+
+update course.customers 
+set email = 'Maria@Schmidt.de'
+where customer_id = 3
+returning customer_id, customer_name, email;
+
+select *
+from course.order_items 
+where order_item_id = 14;
+-- Zostalo to juz usuniete wczesniej na zadaniach 04, ale dodam na nowo i usune jeszcze raz
+
+INSERT INTO course.order_items (
+    order_item_id,
+    order_id,
+    product_id,
+    quantity,
+    unit_price
+)
+VALUES
+    (14,
+    1012,
+    107, 
+    1, 
+    180.00)
+ON CONFLICT (order_item_id) DO NOTHING;
+
+delete from course.order_items 
+where order_item_id = 14
+returning *;
+
+select * 
+from course.products p 
+left join course.order_items oi 
+on p.product_id = oi.product_id;
+
+delete from course.products 
+where product_id = 109
+returning product_id, product_name;
+
+begin;
+
+select * 
+from course.customers;
+
+update course.customers 
+set customer_id = 27
+where customer_id = 101
+returning *;
+
+rollback;
+
+begin;
+
+select * 
+from course.products;
+
+delete from course.products 
+where product_id = 155
+returning *;
+
+rollback;
+
+-- Returning jest przydatne przy update, poniewaz od razu pokazuje nam co zmienilismy, przez co nie trzeba tego szukac i sprawdzac przez select, a to moze zaoszczedzac nam duzo czasu
+
+-- Returning jest przydatne przy delete, poniewaz pokzauzje nam od razu co zostalo usuniete i jesli nie chcielismy czegos usuwac, to od razu jestesmy w stanie to zobaczyc i przywrocic, jesli nie za commitowalismy transakcji
+
+-- Zadania 07
+
+insert into course.customers (
+	customer_id,
+	customer_name,
+	email,
+	country,
+	signup_date,
+	acquisition_channel 
+)
+values (
+	1,
+	'Maria',
+	'test@gmail.com',
+	'PL',
+	'2026-05-04',
+	'organic'
+);
+-- Nie mozna dodac customera o takim id, poniewaz jesto to duplikat primary keya
+
+insert into course.customers (
+	customer_id,
+	customer_name,
+	email,
+	country,
+	signup_date,
+	acquisition_channel 
+)
+values (
+	1,
+	'Maria',
+	'test@gmail.com',
+	'PL',
+	'2026-05-04',
+	'organic'
+)
+on conflict (customer_id) do nothing;
+
+select * 
+from course.customers
+where customer_id = 1;
+
+begin;
+
+insert into course.customers (
+	customer_id,
+	customer_name,
+	email,
+	country,
+	signup_date,
+	acquisition_channel 
+)
+values (
+	1,
+	'Maria',
+	'test@gmail.com',
+	'PL',
+	'2026-05-04',
+	'organic'
+)
+on conflict (customer_id) do update set
+	email = excluded.email,
+	acquisition_channel = excluded.acquisition_channel
+where course.customers.email is distinct from excluded.email
+or course.customers.acquisition_channel is distinct from excluded.acquisition_channel;
+
+select *
+from course.customers
+where customer_id = 1;
+
+commit;
+
+begin;
+
+insert into course.products (
+	product_id,
+	product_name,
+	category,
+	base_price
+)
+values ( 
+	110,
+	'SMT 5rr',
+	'ebook',
+	'199'
+)
+on conflict (product_id) do update set 
+	product_name = excluded.product_name,
+	category = excluded.category,
+	base_price = excluded.base_price
+where course.products.product_name is distinct from excluded.product_name 
+or course.products.category is distinct from excluded.category 
+or course.products.base_price is distinct from excluded.base_price;
+
+select *
+from course.products
+where product_id = 110;
+
+commit;
+
+insert into course.products (
+	product_id,
+	product_name,
+	category,
+	base_price
+)
+values ( 
+	133,
+	'50 macbook shortcuts',
+	'ebook',
+	'39'
+)
+on conflict do nothing;
+
+select *
+from course.products 
+where product_id = 133;
+-- Nie powstal duplikat, poniewaz on conflict broni tabele przed powstniem duplikatu
+
+begin;
+
+select *
+from course.orders 
+where order_id = 1001;
+
+insert into course.orders (
+	order_id,
+	customer_id,
+	order_date,
+	status,
+	total_amount
+)
+values ( 
+	1001,
+	77,
+	'2024-07-21',
+	'cancelled',
+	299
+)
+on conflict (order_id) do update set 
+	customer_id = excluded.customer_id,
+	order_date = excluded.order_date,
+	status = excluded.status,
+	total_amount = excluded.total_amount
+where course.orders.customer_id is distinct from excluded.customer_id
+or course.orders.order_date is distinct from excluded.order_date 
+or course.orders.status is distinct from excluded.status
+or course.orders.total_amount is distinct from excluded.total_amount;
+
+commit;
+
+begin;
+
+select *
+from course.order_items
+where order_item_id = 12;
+
+insert into course.order_items (
+	order_item_id,
+	order_id,
+	product_id,
+	quantity,
+	unit_price
+)
+values ( 
+	12,
+	1001,
+	133,
+	2,
+	299
+)
+on conflict (order_item_id) do update set 
+	order_id = excluded.order_id,
+	product_id = excluded.product_id,
+	quantity = excluded.quantity,
+	unit_price = excluded.unit_price
+where course.order_items.order_id is distinct from excluded.order_id
+or course.order_items.product_id is distinct from excluded.product_id 
+or course.order_items.quantity is distinct from excluded.quantity 
+or course.order_items.unit_price is distinct from excluded.unit_price;
+
+commit;
+
+-- Lepiej uzyc do nothing kiedy na pewno nie chcemy zadnych duplikatow
+-- Lepiej uzyc do update jesli chcemy dodac rekord, a stary zaaktualizowac
+
+-- Upsert jest przydatny w pipelinach, poniewaz dzieki niemu mozemy dodawac nowe rekordy, ktore nawet jak juz istnieja, to zamiast sie zdupliowac, zostana zaaktualizowane na nowe
+
+-- Zadania 08
+
+begin;
+
+insert into course.customers ( 
+	customer_id,
+	customer_name, 
+	email,
+	country,
+	signup_date,
+	acquisition_channel
+)
+values (
+	20,
+	'Ryszard Zawiedzki',
+	'Rysiu.trader@gmail.com',
+	'US',
+	'2026-09-09',
+	'tiktok'
+)
+on conflict (customer_id) do nothing;
+
+select * 
+from course.customers 
+where customer_id = 20;
+
+insert into course.orders (
+	order_id, 
+	customer_id,
+	order_date,
+	status,
+	total_amount
+)
+values (
+	1020,
+	20,
+	'2026-09-09',
+	'pending',
+	199
+)
+on conflict (order_id) do nothing;
+
+select * 
+from course.orders 
+where order_id = 1020;
+
+select * 
+from course.products;
+
+insert into course.order_items (
+	order_item_id,
+	order_id,
+	product_id,
+	quantity,
+	unit_price
+)
+values (
+	20,
+	1020,
+	133,
+	1,
+	199
+)
+on conflict (order_item_id) do nothing;
+
+select * 
+from course.order_items 
+where order_item_id = 20;
+
+select 
+	c.customer_name,
+	o.order_id,
+	p.product_id,
+	oi.quantity,
+	oi.unit_price 
+from course.customers c 
+join course.orders o
+on c.customer_id = o.customer_id 
+join course.order_items oi 
+on o.order_id = oi.order_id 
+join course.products p 
+on p.product_id = oi.product_id
+where o.order_id = 1020;
+
+commit;
+
+begin;
+
+update course.orders 
+set status = 'cancelled'
+where order_id = 1020;
+
+select *
+from course.orders 
+where order_id = 1020;
+
+rollback;
+
+begin;
+
+update course.orders 
+set status = 'paid'
+where order_id = 1020
+returning *;
+
+commit;
+
+select *
+from course.products 
+where product_id = 120;
+
+insert into course.products (
+	product_id,
+	product_name,
+	category,
+	base_price
+)
+values (
+	120,
+	'1:1 coaching fortnite',
+	'mentoring',
+	149
+)
+returning *;
+
+begin;
+
+insert into course.products (
+	product_id,
+	product_name,
+	category,
+	base_price
+)
+values (
+	120,
+	'Python course',
+	'course',
+	999
+)
+on conflict (product_id)  do update set 
+	product_name = excluded.product_name,
+	category = excluded.category, 
+	base_price = excluded.base_price
+where course.products.product_name is distinct from excluded.product_name
+or course.products.category is distinct from excluded.category 
+or course.products.base_price is distinct from excluded.base_price;
+
+select *
+from course.products
+where product_id = 120;
+
+commit;
+
+begin; 
+
+delete from course.products 
+where product_id = 120
+returning *;
+
+commit;
+
+begin;
+
+delete from course.customers 
+where customer_id = 1;
+-- Nie udalo sie usunac klienta, poniewaz ma on przypisany do siebie foreign key z course.orders
+
+commit; 
+
+begin;
 
