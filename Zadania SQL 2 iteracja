@@ -853,3 +853,69 @@ commit;
 
 begin;
 
+select *
+from course.order_items 
+where order_id = 1020;
+
+delete from course.order_items 
+where order_id = 1020;
+
+select *
+from course.orders 
+where order_id = 1020;
+
+delete from course.orders 
+where order_id = 1020
+returning *; 
+
+select *
+from course.customers 
+where customer_id = 20;
+
+delete from course.customers 
+where customer_id = 20
+returning *;
+
+commit;
+
+insert into course.products (
+	product_id,
+	product_name,
+	category,
+	base_price
+)
+values (
+	114,
+	'Price action - tutorial',
+	'ebook',
+	79
+)
+on conflict (product_id) do update set 
+	base_price = excluded.base_price 
+where course.products.base_price is distinct from excluded.base_price;
+
+select *
+from course.products
+where product_id = 114;
+
+commit;
+
+select *
+from course.products 
+where category = 'ebook';
+
+update course.products
+set base_price = base_price * 1.05
+where category = 'ebook'
+returning *;
+
+commit;
+
+/* Bezpieczny schemat pracy z DML;
+ * Uzycie kontrolnego selecta przed zmiana 
+ * Wykonywanie zmiany w transakcji
+ * Sprawdzenie wyniku po przez 'returning'
+ * Uzywa sie transakcji jesli chcemy cos z updateowac albo usunac, poniewaz jak popelnimy blad to mozemy cofnac
+ */
+
+
