@@ -783,12 +783,162 @@ from course_example.test_signups;
 
 -- Zadania 06
 
+alter table course_example.customers
+add column phone_number text;
 
+alter table course_example.customers 
+alter column phone_number type varchar(15);
 
+alter table course_example.orders 
+add column currency varchar(10) default 'PLN';
 
+select *
+from information_schema.columns
+where column_name = 'currency';
 
+alter table course_example.products 
+add constraint chk_base_price
+check (base_price >= 0);
 
+alter table course_example.orders 
+add constraint chk_total_amount
+check (total_amount >= 0);
 
+alter table course_example.customers 
+rename column phone_number to phone;
 
+select *
+from course_example.customers c;
+
+alter table course_example.customers 
+drop column phone;
+
+-- Drop column jest ryzykowne, poniewaz usuwa on wszystkie dane wraz z cala kolumna 
+
+alter table course_example.orders 
+alter column total_amount type numeric(12, 2);
+
+select *
+from information_schema.constraint_column_usage ccu 
+where table_schema = 'course_example' 
+and table_name = 'orders';
+
+alter table course_example.orders 
+drop constraint chk_total_amount;
+
+-- Zadania 07
+
+-- Delete usuwa wybrane wierwsze jesli uzyje sie 'where', a bez 'where' usuwa wszystkie wiersze po kolei
+
+-- Truncate szybko czysci cala tabele ze wszystkich wierszy
+
+-- Drop table usuwa cala tabele wraz z danymi w srodku niej
+
+create table if not exists course_example.delete_practice (
+	id int,
+	name varchar(20)
+);
+
+insert into course_example.delete_practice (
+	id,
+	name 
+)
+values (1, 'Test'),
+	(2, 'Test2'),
+	(3, 'Test3');
+
+delete from course_example.delete_practice 
+where id = 1;
+
+select *
+from course_example.delete_practice;
+
+truncate table course_example.delete_practice;
+
+drop table course_example.delete_practice;
+
+/* Roznica miedzy 'delete', 'truncate', a 'drop' jest taka ze;
+ * delete - uzywa sie do usuwania danych rekordow, ktore sie wybierze poprzez 'where'
+ * 'truncate' - uzywa sie do czyszczenia tabel ze wszystkich rekordow znajdujacych sie w niej
+ * 'drop' - uzywa sie do usuwania calych tabel wraz z ich zawartosciami 
+*/
+
+-- Zadania 08
+
+create table if not exists course_example.customers_copy as 
+select *
+from course_example.customers;
+
+select *
+from course_example.customers_copy;
+
+create table if not exists
+course_example.paid_orders as
+select *
+from course_example.orders 
+where status = 'paid';
+
+select *
+from course_example.paid_orders;
+
+create table if not exists 
+course_example.orders_with_customers as 
+select 
+o.order_id,
+o.order_date,
+o.status,
+o.total_amount,
+c.customer_id,
+c.customer_name,
+c.country 
+from course_example.orders o
+full join course_example.customers c
+on c.customer_id = o.customer_id;
+
+select *
+from course_example.orders_with_customers;
+
+-- Uzyje selecta z course zamiast course_example, zeby miec wiecej rekordow w tabeli
+
+create table if not exists
+course_example.sales_by_country	as 
+select 
+c.country,
+count(o.order_id) as orders_count,
+sum(o.total_amount) as total_revenue
+from course.customers c 
+join course.orders o 
+on c.customer_id = o.customer_id
+group by c.country;
+
+select *
+from course_example.sales_by_country;
+
+create table if not exists
+course_example.empty_orders_report as
+select 
+o.order_id,
+o.order_date,
+o.status,
+o.total_amount
+from course.orders o
+where 1 = 0;
+
+select * 
+from course_example.empty_orders_report;
+
+select *
+from information_schema.table_constraints 
+where table_name = 'customers_copy';
+
+-- Tabela 'customers_copy' nie ma zadnych constraintow
+
+select * 
+from information_schema.table_constraints 
+where table_name = 'customers';
+
+-- Sprawdzilem co pokazuje ten select 
+
+-- Zadania 09
 
 
