@@ -941,4 +941,37 @@ where table_name = 'customers';
 
 -- Zadania 09
 
+create index idx_orders_order_date
+on course_example.orders(order_date);
+
+create index idx_orders_customer_id
+on course_example.orders(customer_id);
+
+create index idx_order_items_product_id
+on course_example.order_items(product_id);
+
+create index idx_orders_customer_id_with_order_date
+on course_example.orders(customer_id, order_date);
+
+explain 
+select *
+from course_example.orders 
+where order_date <= '2028-01-01';
+
+explain 
+select *
+from course_example.customers c 
+join course_example.orders o 
+on c.customer_id = o.customer_id;
+
+-- Poniwaz jest w stanie mu pomoc szybciej znalezc jakies konkretne dane 
+
+-- Zbyt duzo indeksow moze byc problemem, poniewaz indeksy moga spowolnic prace insert, delete i update, wiec nie zawsze sie ich uzywa 
+
+-- Zadania 10
+
+
+
+
+
 
