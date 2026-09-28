@@ -20,7 +20,7 @@ drop schema practice cascade;
 
 drop schema course_example cascade;
 
--- Jest niebezpieczna, poniewaz mozna prez przypadek, usunac cala scheme + dane, ktore sie w niej znajdowaly, wiec trzeba bardzo ostroznie do tego podchodzic
+-- Jest niebezpieczna, poniewaz mozna przez glupi blad, usunac cala scheme + dane, ktore sie w niej znajdowaly, wiec trzeba bardzo ostroznie do tego podchodzic
 
 -- Zadania 02
 
