@@ -1405,6 +1405,256 @@ where table_schema = 'course_example';
  * Dodawanie indeksow, aby query szybciej chodzily
  */
 
+-- Zadania 13 - CTE
+
+with paid_orders as (
+	select 
+		o.order_id,
+		o.customer_id,
+		o.order_date,
+		o.total_amount
+	from course.orders o
+	where o.status = 'paid'
+)
+select 
+	order_id,
+	customer_id,
+	order_date,
+	total_amount
+from paid_orders 
+order by order_date;
+
+with customers_sales as (
+	select
+		c.customer_id,
+		sum(o.total_amount) as total_revenue
+	from course.customers c 
+	join course.orders o
+	on c.customer_id = o.customer_id
+	group by c.customer_id 
+)
+select 
+	customer_id,
+	total_revenue
+from customers_sales
+where total_revenue > 200;
+
+with customers_sales as (
+	select
+		o.customer_id,
+		count(o.order_id) as orders_count,
+		sum(o.total_amount) as total_revenue
+	from course.orders o
+	group by o.customer_id
+)
+select 
+ct.customer_id,
+c.customer_name,
+ct.orders_count,
+ct.total_revenue
+from customers_sales ct 
+join course.customers c
+on c.customer_id = ct.customer_id
+order by ct.total_revenue desc;
+
+with paid_orders as (
+	select
+		status as status_group,
+		count(order_id) as orders_count,
+		sum(total_amount) as total_revenue
+	from course.orders o
+	where  status = 'paid'
+	group by status
+),
+cancelled_orders as (
+	select 
+		status as status_group,
+		count(order_id) as orders_count,
+		sum(total_amount) as total_revenue
+	from course.orders o
+	where status = 'cancelled'
+	group by status
+)
+select
+po.status_group,
+po.orders_count,
+po.total_revenue
+from paid_orders po
+union all 
+select 
+co.status_group,
+co.orders_count,
+co.total_revenue
+from cancelled_orders co;
+
+with customers_total as (
+	select 
+		c.customer_id,
+		c.customer_name,
+		sum(o.total_amount) as total_revenue
+	from course.customers c 
+	join course.orders o
+	on c.customer_id = o.customer_id 
+	group by c.customer_id
+	having sum(o.total_amount) > avg(o.total_amount)
+)
+select 
+customer_id,
+customer_name,
+total_revenue 
+from customers_total
+order by total_revenue desc;
+
+with order_items_totals as (
+	select 
+		o.order_id,
+		o.status,
+		o.total_amount as order_total_amount,
+		sum(oi.quantity * unit_price) as items_total_amount,
+		o.total_amount - sum(oi.quantity * unit_price) as difference_amount
+	from course.orders o
+	left join course.order_items oi 
+	on o.order_id = oi.order_id
+	group by o.order_id
+)
+select
+order_id,
+status,
+order_total_amount,
+items_total_amount,
+difference_amount
+from order_items_totals;
+
+with customers_without_orders as (
+	select
+		c.customer_id,
+		c.customer_name,
+		c.country
+	from course.customers c 
+	left join course.orders o
+	on c.customer_id = o.customer_id 
+	where o.order_id is null
+)
+select 
+customer_id,
+customer_name,
+country
+from customers_without_orders;
+
+with customers_without_orders as (
+	select 
+		c.customer_id,
+		c.customer_name
+	from course.customers c 
+	left join course.orders o
+	on c.customer_id = o.customer_id 
+	where o.order_id is null
+),
+products_without_sales as (
+	select 
+		p.product_id,
+		p.product_name
+	from course.products p 
+	left join course.order_items oi 
+	on p.product_id = oi.product_id
+	where oi.order_id is null
+),
+clients_with_total_orders_amount_over_300 as (
+	select 
+		c.customer_id,
+		c.customer_name,
+		sum(o.total_amount) as total_revenue
+	from course.orders o
+	join course.customers c
+	on c.customer_id = o.customer_id
+	group by c.customer_id
+	having sum(o.total_amount) > 300
+)
+select 
+'customers without orders' as issue_type,
+customer_id as object_id,
+customer_name as object_name,
+0 as metric_value
+from customers_without_orders 
+union all 
+select 
+'products without sales',
+product_id,
+product_name,
+0
+from products_without_sales 
+union all 
+select
+'Clients orders value over 300',
+customer_id,
+customer_name,
+total_revenue
+from clients_with_total_orders_amount_over_300;
+
+with product_sales as (
+	select 
+		p.product_id,
+		p.product_name,
+		p.category,
+		count(oi.order_item_id) as units_sold,
+		sum(o.total_amount) as total_revenue
+	from course.products p 
+	join course.order_items oi 
+	on oi.product_id = p.product_id 
+	join course.orders o
+	on o.order_id = oi.order_id 
+	group by p.product_id 
+	having count(oi.order_item_id) > 1
+)
+select 
+product_id,
+product_name,
+category,
+units_sold,
+total_revenue
+from product_sales;
+
+with monthly_sales as (
+	select 
+		date_trunc('month', o.order_date) as sales_month,
+		c.country,
+		count(o.order_id) as orders_count,
+		sum(o.total_amount) as total_revenue
+	from course.orders o 
+	join course.customers c 
+	on c.customer_id = o.customer_id 
+	group by sales_month, c.country 
+	having sum(o.total_amount) > 100
+)
+select 
+sales_month,
+country,
+orders_count,
+total_revenue
+from monthly_sales;
+
+with customer_segments as (
+	select
+		c.customer_id,
+		c.customer_name,
+		case when count(o.order_id) >= 1 then 'with_orders' 
+		else 'without_orders' end as customer_segment
+	from course.customers c 
+	left join course.orders o 
+	on c.customer_id = o.customer_id
+	group by c.customer_id 
+)
+select 
+customer_id,
+customer_name,
+customer_segment 
+from customer_segments;
+
+/* 
+ * CTE od zwyklej subquery rozni sie tym, ze jest duzo bardziej czytelne 
+ * Od 'view' rozni sie tym, ze CTE nie jest wewnetrzne i nie ma zadnego wplywu na baze danych
+ */
+
 
 
 
