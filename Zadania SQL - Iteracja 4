@@ -1,0 +1,856 @@
+-- Iteracja 4
+
+-- Zadania 01
+
+select *
+from course.customers c;
+-- Grain wyniku; jeden wiersz = jeden klient
+
+select *
+from course.orders o;
+-- Grain wyniku; jeden wiersz = jedno zamowienie
+
+select 
+c.customer_id,
+c.customer_name,
+o.order_id,
+o.total_amount 
+from course.customers c 
+left join course.orders o
+on c.customer_id = o.customer_id;
+-- Grain wyniku; jeden wiersz = jedno zamowienie
+
+-- Liczba wierszy samych klientow, a klientow polaczonych z zamowieniami, rozni sie poniewaz, wczesniej pokazywalo samych klientow, a teraz pokazuje kazde zamowienie danego klienta
+
+select 
+count(distinct c.customer_id) as customers_count
+from course.customers c 
+join course.orders o 
+on c.customer_id = o.customer_id;
+
+select 
+	o.order_id,
+	o.total_amount,
+	oi.order_item_id,
+	oi.quantity,
+	oi.unit_price
+from course.orders o 
+join course.order_items oi 
+on o.order_id = oi.order_id;
+-- Grain wyniku; jeden wiersz = jedna pozycja
+
+select 
+sum(oi.quantity * oi.unit_price) as items_total_revenue
+from course.order_items oi;
+
+select 
+o.order_id,
+sum(oi.quantity * oi.unit_price) as items_total_revenue
+from course.orders o 
+join course.order_items oi 
+on o.order_id = oi.order_id
+group by o.order_id;
+
+select 
+c.customer_id,
+count(o.order_id) as orders_count,
+sum(o.total_amount) as total_revenue
+from course.orders o 
+join course.customers c 
+on o.customer_id = c.customer_id 
+group by c.customer_id;
+
+with orders_total as (
+	select 
+		sum(oi.quantity * oi.unit_price) as items_total_revenue
+	from course.orders o 
+	join course.order_items oi 
+	on o.order_id = oi.order_id 
+	group by o.order_id
+),
+customers_revenue as (
+	select 
+		c.customer_id,
+		count(o.order_id) as orders_count,
+		sum(o.total_amount) as total_revenue
+	from course.orders o 
+	join course.customers c 
+	on o.customer_id = c.customer_id
+	group by c.customer_id
+)
+select 
+	cr.customer_id,
+	cr.orders_count,
+	cr.total_revenue
+from customers_revenue cr;
+
+select 
+c.country,
+count(distinct c.customer_id) as customers_count,
+count(o.order_id) as orders_count,
+sum(o.total_amount) as total_revenue
+from course.customers c 
+left join course.orders o 
+on c.customer_id = o.customer_id 
+group by c.country;
+
+-- sum(o.total_amount) po joinie orders z order_items moze dac zly wynik, poniewaz wtedy zmieni nam sie grain na order_items i jedno zamowienie moze wystapic wiele razy 
+
+-- Zadania 02 sa juz zrobione jako (zadania 13) w iteracji 3
+
+-- Zadania 03
+
+select 
+o.order_id,
+o.customer_id,
+o.order_date,
+o.total_amount,
+row_number() over (
+	partition by o.customer_id 
+	order by o.order_date asc
+) as customer_order_number
+from course.orders o;
+
+with numbered_orders as (
+	select 
+		o.customer_id,
+		o.order_id,
+		o.order_date,
+		o.total_amount,
+		row_number() over (
+			partition by o.customer_id
+			order by o.order_date desc
+		) as rn
+	from course.orders o
+)
+select 
+no.customer_id,
+no.order_id,
+no.order_date,
+no.total_amount
+from numbered_orders no
+where no.rn = 1
+order by no.order_date desc;
+
+select 
+	o.order_id,
+	o.customer_id,
+	o.total_amount,
+	rank() over (
+		order by o.total_amount desc
+	) as revenue_rank,
+	dense_rank() over (
+		order by o.total_amount desc
+	)
+from course.orders o;
+
+select 
+	o.order_id,
+	o.customer_id,
+	o.order_date,
+	o.total_amount,
+	lag(o.total_amount) over (
+		partition by o.customer_id
+		order by o.order_date, o.order_id
+	) as previous_order_amount
+from course.orders o;
+
+select 
+	o.order_id,
+	o.customer_id,
+	o.order_date,
+	o.total_amount,
+	lag(o.total_amount) over (
+		partition by o.customer_id
+		order by o.order_date, o.order_id
+	) as previous_order_amount,
+	o.total_amount - lag(o.total_amount) over (
+		partition by o.customer_id
+		order by o.order_date, o.order_id
+	) as amount_difference
+from course.orders o;
+	
+select 
+	o.order_id,
+	o.customer_id,
+	o.order_date,
+	lead(o.order_date) over(
+		partition by o.customer_id
+		order by o.order_date, o.order_id
+	) as next_order_date
+from course.orders o;
+
+select 
+	o.order_id,
+	o.customer_id,
+	o.order_date,
+	o.total_amount,
+	sum(o.total_amount) over (
+		partition by o.customer_id
+		order by o.order_date, o.order_id
+		rows between unbounded preceding and current row
+	) as running_customer_revenue
+from course.orders o;
+
+select 
+	o.order_id,
+	o.customer_id,
+	o.total_amount,
+	sum(o.total_amount) over (
+		partition by o.customer_id
+		order by o.order_id
+		rows between unbounded preceding and unbounded following
+	) as customer_total_revenue
+from course.orders o;
+
+select 
+	o.order_id,
+	o.total_amount,
+	sum(o.total_amount) over () as all_orders_revenue,
+	round(o.total_amount / sum(o.total_amount) over() * 100, 2) as revenue_percent
+from course.orders o;
+
+with sales_per_country as (
+	select 
+		c.country,
+		sum(o.total_amount) as total_revenue
+	from course.customers c 
+	join course.orders o 
+	on c.customer_id = o.customer_id
+	group by c.country
+	)
+select 
+	spc.country,
+	spc.total_revenue,
+	rank() over (
+		order by spc.total_revenue desc
+	) as country_rank
+from sales_per_country spc;
+
+with numbered_orders as (
+	select 
+		o.customer_id,
+		o.order_id,
+		o.order_date,
+		o.total_amount,
+		row_number() over (
+			partition by o.customer_id
+			order by o.order_date, o.order_id
+		) as rn
+	from course.orders o
+)
+select 
+customer_id,
+order_id,
+order_date,
+total_amount
+from numbered_orders no
+where rn = 1;
+
+with products_sales as (
+	select 
+		p.category,
+		p.product_id,
+		p.product_name,
+		count(oi.order_item_id) as units_sold
+	from course.products p
+	join course.order_items oi
+	on p.product_id = oi.product_id
+	group by p.product_id
+)
+select 
+category,
+product_id,
+product_name,
+units_sold,
+dense_rank() over (
+	partition by category
+	order by units_sold desc
+) as rank_in_category
+from products_sales ps;
+
+select 
+o.order_id,
+o.customer_id,
+o.order_date,
+o.total_amount,
+sum(o.total_amount) over (
+	partition by o.customer_id
+	order by o.order_date, o.order_id
+	rows between 2 preceding and current row
+)
+from course.orders o;
+
+with customers_revenue as (
+	select 	
+		o.customer_id,
+		sum(o.total_amount) as total_revenue
+	from course.orders o
+	group by o.customer_id 
+)
+select 
+customer_id,
+total_revenue,
+ntile(4) over (
+	order by total_revenue desc 
+) as revenue_quartile
+from customers_revenue cr;
+
+select 
+o.order_id,
+o.customer_id,
+o.order_date,
+o.total_amount,
+first_value(o.total_amount) over (
+	partition by o.customer_id
+	order by o.order_date, o.order_id
+) as first_order_amount,
+last_value(o.total_amount) over (
+	partition by o.customer_id
+	order by o.order_date, o.order_id
+	rows between unbounded preceding and unbounded following
+) as last_order_amount
+from course.orders o;
+
+select 
+o.order_id,
+o.customer_id,
+o.order_date,
+o.total_amount,
+lag(o.total_amount) over customer_timeline as previous_order_amount,
+lead(o.total_amount) over customer_timeline as next_order_amount,
+row_number() over customer_timeline as customer_order_number
+from course.orders o 
+window customer_timeline as (
+	partition by o.customer_id
+	order by o.order_date, o.order_id
+ );
+
+with duplicate_customers as (
+	select 
+		c.*,
+		row_number() over (
+			partition by lower(c.email)
+			order by c.signup_date asc, c.customer_id desc 
+		) as rn
+	from course.customers c 
+	where c.email is not null
+)
+select 
+customer_id,
+customer_name,
+email,
+country,
+signup_date
+from duplicate_customers dc
+where dc.rn = 1;
+
+-- Zadania 04
+
+
+select 
+c.customer_id,
+c.customer_name,
+c.country,
+c.acquisition_channel,
+count(o.order_id) as orders_count,
+count(o.order_id) filter (where o.status = 'paid') as paid_orders,
+count(o.order_id) filter (where o.status = 'cancelled') as cancelled_orders,
+coalesce(sum(o.total_amount), '0') as total_revenue,
+round(avg(o.total_amount), 2) as averaege_order_value,
+min(o.order_date) as first_order_date,
+max(o.order_date) as last_order_date,
+case when count(o.order_id) > 0 
+then 'buyer' else 'no orders' end as customer_status
+from course.customers c 
+left join course.orders o
+on c.customer_id = o.customer_id
+group by c.customer_id
+order by total_revenue desc;
+
+
+select 
+p.product_id,
+p.product_name,
+p.category,
+p.base_price,
+coalesce(sum(oi.quantity), '0') as units_sold,
+count(oi.order_item_id) as orders_count,
+coalesce(sum(oi.quantity * oi.unit_price), '0') as gross_revenue,
+avg(oi.unit_price) as average_unit_price,
+case when count(oi.order_item_id) = 0 then 'not sold' 
+else 'sold' end as sales_status
+from course.products p 
+left join course.order_items oi 
+on p.product_id = oi.product_id 
+group by p.product_id
+order by gross_revenue desc;
+
+select 
+date_trunc('month', o.order_date) as sales_month,
+c.country,
+count(distinct o.customer_id) as customers_count,
+count(o.order_id) as orders_count,
+count(o.order_id) filter (where o.status = 'paid') as paid_orders_count,
+count(o.order_id) filter (where o.status = 'cancelled') as cancelled_orders_count,
+round(sum(o.total_amount), 2) as total_revenue,
+round(avg(o.total_amount), 2) as avgerage_order_value
+from course.orders o 
+join course.customers c 
+on c.customer_id = o.customer_id
+group by sales_month, c.country
+having sum(o.total_amount) > 100
+order by sales_month, total_revenue desc;
+
+with customer_totals as (
+	select 
+		c.customer_id,
+		c.customer_name,
+		count(o.order_id) as orders_count,
+		sum(o.total_amount) as total_revenue
+	from course.customers c 
+	join course.orders o 
+	on c.customer_id = o.customer_id 
+	group by c.customer_id
+),
+average_total_revenue as (
+	select 
+		avg(total_revenue) as average_total_amount
+	from customer_totals 
+)
+select 
+ct.customer_id,
+ct.customer_name,
+ct.orders_count,
+ct.total_revenue
+from customer_totals ct
+join average_total_revenue atr
+on ct.total_revenue > atr.average_total_amount
+order by total_revenue desc;
+
+select 
+'Customers without orders' as issue_type,
+c.customer_id as object_id,
+c.customer_name as object_name,
+'Customer has no orders' as details
+from course.customers c 
+left join course.orders o
+on c.customer_id = o.customer_id 
+where o.order_id is null
+union all
+select
+'Products without orders',
+p.product_id,
+p.product_name,
+'Product has no sales' 
+from course.products p
+left join course.order_items oi
+on p.product_id = oi.product_id
+where oi.order_item_id is null
+union all 
+select 
+'Orders without positions',
+o.order_id,
+concat('Order ', o.order_id),
+'Order is blank'
+from course.orders o 
+left join course.order_items oi 
+on o.order_id = oi.order_id 
+where oi.order_item_id is null
+union all 
+select 
+'Customers without email',
+c.customer_id,
+c.customer_name,
+'Customer has no email'
+from course.customers c 
+where c.email is null
+order by issue_type, object_id;
+
+with items_total_amount as (
+	select 
+		oi.order_id,
+		sum(oi.quantity * oi.unit_price) as items_total_amount
+	from course.order_items oi
+	group by oi.order_id
+)
+select 
+o.order_id,
+c.customer_name,
+o.status,
+o.total_amount as order_total_amount,
+ita.items_total_amount,
+o.total_amount - ita.items_total_amount as difference_amount,
+case when o.total_amount - ita.items_total_amount <> 0 
+then 'different' else 'match' end as amount_check
+from course.orders o
+join course.customers c
+on o.customer_id = c.customer_id
+join course.order_items oi
+on oi.order_id = o.order_id
+join items_total_amount ita
+on oi.order_id = ita.order_id;
+
+with customers_with_orders_count as (
+	select
+		c.acquisition_channel,
+		count(distinct o.customer_id) as customers_with_orders_count
+	from course.orders o 
+	join course.customers c 
+	on c.customer_id = o.customer_id
+	where o.order_id >= 1
+	group by c.acquisition_channel
+),
+paid_orders_count as (
+	select 
+		c.acquisition_channel,
+		count(o.order_id) as paid_orders_count
+	from course.orders o
+	join course.customers c 
+	on c.customer_id = o.customer_id
+	where o.status = 'paid'
+	group by c.acquisition_channel 
+),
+orders_summary as (
+	select 
+		c.acquisition_channel,
+		count(o.order_id) as orders_count,
+		sum(o.total_amount) as total_revenue
+	from course.orders o
+	join course.customers c 
+	on c.customer_id = o.customer_id
+	group by c.acquisition_channel
+),
+customers_count as (
+	select 
+		c.acquisition_channel,
+		count(c.customer_id) as customers_count
+	from course.customers c
+	group by c.acquisition_channel
+)
+select 
+os.acquisition_channel,
+cc.customers_count,
+cwoc.customers_with_orders_count,
+os.orders_count,
+poc.paid_orders_count,
+os.total_revenue,
+round(os.total_revenue / cc.customers_count, 2) as average_revenue_per_customer
+from orders_summary os
+join paid_orders_count poc
+on os.acquisition_channel = poc.acquisition_channel
+join customers_with_orders_count cwoc
+on cwoc.acquisition_channel = os.acquisition_channel
+join customers_count cc
+on cc.acquisition_channel = os.acquisition_channel
+order by os.total_revenue desc;
+
+select 
+p.product_id,
+p.product_name,
+p.category,
+string_agg(distinct c.country, ',') as countries,
+sum(oi.quantity) as units_sold,
+sum(oi.quantity * oi.unit_price) as total_revenue
+from course.products p 
+join course.order_items oi 
+on oi.product_id = p.product_id 
+join course.orders o 
+on o.order_id = oi.order_id 
+join course.customers c 
+on c.customer_id = o.customer_id
+where c.country = 'PL' or c.country = 'DE'
+group by p.product_id
+having sum(oi.quantity) > 1
+order by units_sold desc, total_revenue desc;
+
+select
+c.customer_id,
+c.customer_name
+from course.customers c 
+where exists (
+	select 1
+	from course.orders o 
+	join course.order_items oi 
+	on o.order_id = oi.order_id
+	join course.products p 
+	on p.product_id = oi.product_id
+	where o.customer_id = c.customer_id 
+	and p.category = 'course'
+)
+and not exists (
+	select 1
+	from course.orders o 
+	join course.order_items oi 
+	on o.order_id = oi.order_id
+	join course.products p 
+	on p.product_id = oi.product_id
+	where o.customer_id = c.customer_id 
+	and p.category = 'template'
+);
+
+with orders_with_customers_and_items as (
+	select 
+		o.order_id,
+		o.status,
+		c.customer_name,
+		o.order_date,
+		count(oi.order_item_id) as items_count,
+		o.total_amount as order_total_amount,
+		sum(oi.quantity * oi.unit_price) as items_total_amount,
+		count(oi.quantity) as items_quantity
+	from course.orders o 
+	left join course.order_items oi 
+	on o.order_id = oi.order_id
+	left join course.customers c 
+	on c.customer_id = o.customer_id
+	where (o.status = 'paid' or o.status = 'pending') 
+	and o.order_date >= '2026-05-01'
+	group by o.order_id, c.customer_name
+	order by o.order_id desc
+)
+select 
+owcai.order_id,
+owcai.order_date,
+owcai.customer_name,
+owcai.status,
+owcai.items_count,
+owcai.items_quantity,
+owcai.items_total_amount,
+owcai.order_total_amount
+from orders_with_customers_and_items owcai
+order by order_date, order_id;
+
+with customer_last_order as (
+	select 
+		o.customer_id,
+		o.order_id,
+		o.order_date,
+		o.total_amount,
+		row_number() over (
+			partition by o.customer_id
+			order by o.order_date desc, o.order_id desc
+		) as rn
+		from course.orders o
+)
+select 
+clo.customer_id,
+c.customer_name,
+clo.order_id,
+clo.order_date,
+clo.total_amount
+from customer_last_order clo
+join course.customers c 
+on clo.customer_id = c.customer_id 
+where clo.rn = 1
+order by clo.customer_id;
+
+with customers_running_totals as (
+	select 
+		o.customer_id,
+		o.order_date,
+		o.order_id,
+		o.total_amount,
+		sum(o.total_amount) over (
+			partition by o.customer_id
+			order by o.order_date, o.order_id
+			rows between unbounded preceding and current row
+		) as customer_running_total
+	from course.orders o
+)
+select 
+crt.customer_id,
+crt.order_id,
+crt.order_date,
+crt.total_amount,
+crt.customer_running_total
+from customers_running_totals crt
+order by crt.customer_id, crt.order_date, crt.order_id;
+
+with orders_totals_and_previous_order_amonunt as (
+	select 
+		o.customer_id,
+		o.order_id,
+		o.order_date,
+		o.total_amount,
+		lag(o.total_amount) over (
+			partition by o.customer_id
+			order by o.order_date, o.order_id 
+		) as previous_order_amount
+		from course.orders o
+)
+select 
+otapoa.customer_id,
+otapoa.order_id,
+otapoa.order_date,
+otapoa.total_amount,
+otapoa.previous_order_amount,
+otapoa.total_amount - otapoa.previous_order_amount as difference_vs_previous_order
+from orders_totals_and_previous_order_amonunt otapoa
+order by customer_id, order_date;
+
+select 
+p.product_id,
+p.product_name,
+p.category,
+sum(oi.quantity * oi.unit_price) as total_revenue,
+rank() over (
+	partition by p.category
+	order by sum(oi.quantity * oi.unit_price)
+)
+from course.products p 
+join course.order_items oi
+on p.product_id = oi.product_id
+group by p.product_id, p.category;
+
+with duplicate_email as (
+	select 
+		c.customer_id,
+		c.customer_name,
+		c.email,
+		c.signup_date,
+		row_number() over (
+			partition by lower(email)
+			order by c.signup_date
+		) as rn
+	from course.customers c 
+	where c.email is not null
+)
+select 
+customer_id,
+customer_name,
+email,
+signup_date
+from duplicate_email de 
+where rn = 1
+order by de.email;
+
+create view course.v_customers_order_activity as (
+	select 
+		c.customer_id,
+		c.customer_name,
+		c.country,
+		count(o.order_id) as orders_count,
+		coalesce(sum(o.total_amount), 0) as total_revenue,
+		max(o.order_date) as last_order_date
+	from course.customers c
+	left join course.orders o
+	on c.customer_id = o.customer_id
+	group by c.customer_id
+);
+
+select * from course.v_customers_order_activity
+
+create materialized view if not exists course.mv_monthly_sales_by_country as (
+	select 
+		date_trunc('month', o.order_date) as sales_month,
+		c.country,
+		count(o.order_id) as orders_count,
+		sum(o.total_amount) as total_revenue
+	from course.customers c 
+	join course.orders o
+	on c.customer_id = o.customer_id
+	group by sales_month, c.country
+	order by sales_month
+);
+
+refresh materialized view course.mv_monthly_sales_by_country;
+	
+select *
+from course.mv_monthly_sales_by_country;
+
+insert into course.products (
+	product_id,
+	product_name,
+	category,
+	base_price
+)
+values (
+	250,
+	'DML Practice Pack',
+	'course',
+	89.00
+)
+on conflict (product_id) do update set 
+	product_id = excluded.product_id,
+	product_name = excluded.product_name,
+	category = excluded.category,
+	base_price = excluded.base_price
+returning *;
+
+begin;
+
+insert into course.customers (
+	customer_id,
+	customer_name,
+	email,
+	country,
+	signup_date,
+	acquisition_channel
+)
+values (
+	444,
+	'Karol Krol',
+	'karol.wielki29@gmail.com',
+	'PL',
+	'2026-10-06',
+	'instagram'
+)
+returning *;
+
+insert into course.orders (
+	order_id,
+	customer_id,
+	order_date,
+	status,
+	total_amount
+)
+values (
+	4444,
+	444,
+	'2026-10-06',
+	'paid',
+	199
+)
+returning *;
+
+select 
+*
+from course.customers c 
+join course.orders o 
+on c.customer_id = o.customer_id 
+where c.customer_id = 444;
+
+rollback;
+
+with total_base_price_by_category as (
+	select 
+		p.category,
+		sum(p.base_price) as total_base_price
+	from course.products p 
+	group by p.category
+),
+average_category_base_price as (
+	select 
+		category,
+		avg(total_base_price) as category_avg_price
+	from total_base_price_by_category
+	group by category
+)
+select
+p.product_id,
+p.product_name,
+p.category,
+p.base_price,
+acbp.category_avg_price
+from course.products p 
+left join total_base_price_by_category tbpbc
+on p.category = tbpbc.category 
+left join average_category_base_price acbp 
+on p.category = acbp.category
+order by p.category, p.base_price desc;
+
+
+
+
+
